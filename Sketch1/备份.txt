@@ -1,0 +1,217 @@
+#include <Wire.h>//使用wire.h的库
+#include "paj7620.h"//使用额外拓展的Paj7620手势识别的库
+
+#define GES_REACTION_TIME		800//设置反应延时800ms
+#define GES_QUIT_TIME			1000//设置退出延时1000ms
+volatile char item;//定义item存储读取信息
+
+//初始化
+void setup()
+{
+	Serial.begin(9600);//定义串口波特率为9600
+	pinMode(11, INPUT);//定义一个限位开关为输入设备
+	pinMode(12, INPUT);//定义另一个限位开关为输入设备
+	pinMode(9, OUTPUT);//定义电机一引脚为输出端
+	pinMode(10, OUTPUT);//定义另一电机引脚为输出端
+
+	item = Serial.read();//读取串口信息
+}
+//循环体
+void loop()
+{
+	uint8_t data = 0, data1 = 0, error; //定义数据data，data1，和error
+
+	error = paj7620ReadReg(0x43, 1, &data);				//读取0x43位置的手势结果
+	if (!error) //如果没有错误，执行
+	{
+		switch (data) 									// 当不同的手势被检测到，data的变量相会给0x43赋值为不同的变量
+		{
+
+			//case GES_RIGHT_FLAG://当变量是右挥动
+			//	delay(GES_REACTION_TIME);//延时800ms反应时间
+			//	paj7620ReadReg(0x43, 1, &data);//将0x43的地址位赋予变量 GES_RIGHT_FLAG
+			//	if(data == GES_LEFT_FLAG) 
+			//	{
+			//		Serial.println("Right-Left");//串口打印
+			//	}
+			//	else if(data == GES_FORWARD_FLAG) 
+			//	{
+			//		Serial.println("Forward");
+			//		delay(GES_QUIT_TIME);
+			//	}
+			//	else if(data == GES_BACKWARD_FLAG) 
+			//	{
+			//		Serial.println("Backward");
+			//		delay(GES_QUIT_TIME);
+			//	}
+			//	else
+			//	{
+			//		Serial.println("Right");		
+			//	}          
+			//	break;
+
+			//case GES_LEFT_FLAG:
+			//	delay(GES_REACTION_TIME);
+			//	paj7620ReadReg(0x43, 1, &data);
+			//	if(data == GES_RIGHT_FLAG) 
+			//	{
+			//		Serial.println("Left-Right");
+			//	}
+			//	else if(data == GES_FORWARD_FLAG) 
+			//	{
+			//		Serial.println("Forward");
+			//		delay(GES_QUIT_TIME);
+			//	}
+			//	else if(data == GES_BACKWARD_FLAG) 
+			//	{
+			//		Serial.println("Backward");
+			//		delay(GES_QUIT_TIME);
+			//	}
+			//	else
+			//	{
+			//		Serial.println("Left");			
+			//	}          
+			//	break;
+			//	break;
+
+		case GES_UP_FLAG://当变量是上挥动
+			delay(GES_REACTION_TIME);//延时800ms反应时间
+			paj7620ReadReg(0x43, 1, &data);//赋值
+			//if(data == GES_DOWN_FLAG) //当信号是下挥动时
+			//{
+			//	Serial.println("Up-Down");
+			//}
+			//else if(data == GES_FORWARD_FLAG) 
+			//{
+			//	Serial.println("Forward");
+			//	delay(GES_QUIT_TIME);
+			//}
+			//else if(data == GES_BACKWARD_FLAG) 
+			//{
+			//	Serial.println("Backward");
+			//	delay(GES_QUIT_TIME);
+			//}
+			if(data == GES_UP_FLAG)
+			{
+				Serial.println("Up");
+				digitalWrite(9,HIGH);
+				digitalWrite(10,LOW);
+			}
+			else if(data == GES_DOWN_FLAG)
+			{
+				Serial.println("Down");
+				digitalWrite(9,LOW);
+				digitalWrite(10,HIGH);
+			}
+			break;
+
+		case GES_DOWN_FLAG:
+			delay(GES_REACTION_TIME);
+			paj7620ReadReg(0x43, 1, &data);
+			if(data == GES_UP_FLAG) 
+			{
+				Serial.println("Down-Up");
+			}
+			else if(data == GES_FORWARD_FLAG) 
+			{
+				Serial.println("Forward");
+				delay(GES_QUIT_TIME);
+			}
+			else if(data == GES_BACKWARD_FLAG) 
+			{
+				Serial.println("Backward");
+				delay(GES_QUIT_TIME);
+			}
+			else
+			{
+				Serial.println("Down");
+				digitalWrite(9,LOW);
+				digitalWrite(10,HIGH);
+			}
+			break;
+
+		case GES_FORWARD_FLAG:
+			delay(GES_REACTION_TIME);
+			paj7620ReadReg(0x43, 1, &data);
+			if(data == GES_BACKWARD_FLAG) 
+			{
+				Serial.println("Forward-Backward");
+				delay(GES_QUIT_TIME);
+			}
+			else
+			{
+				Serial.println("Forward");
+				delay(GES_QUIT_TIME);
+			}
+			break;
+
+		case GES_BACKWARD_FLAG:		  
+			delay(GES_REACTION_TIME);
+			paj7620ReadReg(0x43, 1, &data);
+			if(data == GES_FORWARD_FLAG) 
+			{
+				Serial.println("Backward-Forward");
+				delay(GES_QUIT_TIME);
+			}
+			else
+			{
+				Serial.println("Backward");
+				delay(GES_QUIT_TIME);
+			}
+			break;
+
+		case GES_CLOCKWISE_FLAG:
+			Serial.println("Clockwise");
+			break;
+
+		case GES_COUNT_CLOCKWISE_FLAG:
+			Serial.println("anti-clockwise");
+			break;  
+		default:
+			paj7620ReadReg(0x44, 1, &data1);
+			if (data1 == GES_WAVE_FLAG) 
+			{
+				Serial.println("wave");
+			}
+			break;
+		}
+	}
+	delay(100);
+
+
+
+	if (digitalRead(11) == 0) {
+		digitalWrite(9,HIGH);
+		digitalWrite(10,HIGH);
+	}
+	if (digitalRead(12) == 0) {
+		digitalWrite(9,HIGH);
+		digitalWrite(10,HIGH);
+	}
+
+	while (Serial.available() > 0) {//判断串口是否有信号输入，有则执行switch选择
+		switch (item) {//使用switch来判断收到什么信号执行怎样的操作
+		case '0'://信号0
+			//停止
+			digitalWrite(9,HIGH);
+			digitalWrite(10,HIGH);
+			break;
+			//电机左转
+		case '1':
+			digitalWrite(9,HIGH);
+			digitalWrite(10,LOW);
+			break;
+			//电机右转
+		case '2':
+			digitalWrite(9,LOW);
+			digitalWrite(10,HIGH);
+			break;
+			//收到干扰信号时，保证电机停止状态
+		default:
+			digitalWrite(9,HIGH);
+			digitalWrite(10,HIGH);
+			break;
+		}
+	}
+
+}
